@@ -11,10 +11,10 @@ namespace BitDiffer.Common.Configuration
         private bool _includePrivate = true;
         private bool _includeProtected = true;
         private bool _includeInternal = true;
-        private bool _changedItemsOnly;
-		private bool _ignoreAssemblyAttributeChanges;
-		private bool _compareMethodImplementations = true;
-		private string _textFilter;
+        private bool _changedItemsOnly = true;
+        private bool _ignoreAssemblyAttributeChanges;
+        private bool _compareMethodImplementations = false;
+        private string _textFilter;
 		public static ComparisonFilter Default = new ComparisonFilter();
 
 		[XmlAttribute("PublicTypesOnly")]

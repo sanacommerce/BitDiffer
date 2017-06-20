@@ -58,7 +58,7 @@ namespace BitDiffer.Extractor
             {
                 var errMessage = ex.GetNestedExceptionMessage();
                 Log.Error(errMessage);
-                throw new Exception(errMessage);
+                throw new Exception(errMessage, ex);
 		    }
 			finally
 			{
@@ -112,34 +112,22 @@ namespace BitDiffer.Extractor
         }
 
         private Assembly CurrentDomain_ReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
-		{
-			Assembly assembly = null;
+        {
+            Assembly assembly = null;
 
-			Log.Verbose("Attempting to resolve assembly reference '{0}'", args.Name);
+            Log.Verbose("Attempting to resolve assembly reference '{0}'", args.Name);
 
-			Assembly[] list = AppDomain.CurrentDomain.ReflectionOnlyGetAssemblies();
-			foreach (Assembly asm in list)
-			{
-				if (asm.FullName == args.Name)
-				{
-					return asm;
-				}
-			}
-
-            if (_config.ReferenceDirectories != null)
+            Assembly[] list = AppDomain.CurrentDomain.ReflectionOnlyGetAssemblies();
+            foreach (Assembly asm in list)
             {
-                string[] dirs = _config.ReferenceDirectories.Split(';');
-
-                foreach (string dir in dirs)
+                if (asm.FullName == args.Name)
                 {
-                    assembly = LoadAssemblyFromFile(args.Name, dir);
-
-                    if (assembly != null)
-                    {
-                        break;
-                    }
+                    return asm;
                 }
             }
+
+            if (_config.ReferenceDirectories != null)
+                assembly = LoadAssemblyFromDirectories(args, _config.ReferenceDirectories.Split(';'));
 
             if (assembly == null)
             {
@@ -148,34 +136,47 @@ namespace BitDiffer.Extractor
                     assembly = LoadAssemblyFromGAC(args.Name);
 
                     if (assembly == null)
-                    {
                         assembly = LoadAssemblyFromFile(args.Name);
-                    }
                 }
                 else
                 {
                     assembly = LoadAssemblyFromFile(args.Name);
 
                     if (assembly == null)
-                    {
                         assembly = LoadAssemblyFromGAC(args.Name);
-                    }
                 }
             }
 
-			if (assembly == null)
-			{
-				Log.Error("Could not resolve assembly reference '{0}'.", args.Name);
-			}
-			else
-			{
-				Log.Verbose("Assembly loaded.");
-			}
+            if (assembly == null)
+                Log.Error("Could not resolve assembly reference '{0}'.", args.Name);
+            else
+                Log.Verbose("Assembly loaded.");
 
-			return assembly;
-		}
+            return assembly;
+        }
 
-		private static Assembly domain_AssemblyResolve(object sender, ResolveEventArgs args)
+        private Assembly LoadAssemblyFromDirectories(ResolveEventArgs args, string[] dirs)
+        {
+            // Look for the specific version of dll, to not suffer from breaking changes in reference dlls.
+            foreach (string dir in dirs)
+            {
+                var assembly = LoadExactAssemblyFromFile(args.Name, dir);
+                if (assembly != null)
+                    return assembly;
+            }
+
+            // If specific version not found, return the first avaliable.
+            foreach (string dir in dirs)
+            {
+                var assembly = LoadAssemblyFromFile(args.Name, dir);
+                if (assembly != null)
+                    return assembly;
+            }
+
+            return null;
+        }
+
+        private static Assembly domain_AssemblyResolve(object sender, ResolveEventArgs args)
 		{
 			// Apparently a bug in .NET... it has trouble resolving assemblies that are already loaded!
 			Assembly[] list = AppDomain.CurrentDomain.GetAssemblies();
@@ -226,33 +227,59 @@ namespace BitDiffer.Extractor
             return LoadAssemblyFromFile(name, Path.GetDirectoryName(_assemblyFile));
         }
 
-		private Assembly LoadAssemblyFromFile(string name, string dir)
-		{
-			// Try to load from file
-			if (name.IndexOf(',') > 0)
-			{
-				name = name.Substring(0, name.IndexOf(','));
-			}
+        private Assembly LoadExactAssemblyFromFile(string fullAssemblyName, string dir)
+        {
+            string name;
+            var filePath = GetAssaemblyPath(fullAssemblyName, dir, out name);
+            var parts = fullAssemblyName.Split(',');
+            string version = parts[1].Split('=').Last();
 
-            string fileName = Path.Combine(dir, name);
+            Log.Verbose("Searching for assembly file '{0}'", filePath);
 
-			if (!fileName.EndsWith(".dll"))
-			{
-				fileName += ".dll";
-			}
-
-			Log.Verbose("Searching for assembly file '{0}'", fileName);
-
-			if (File.Exists(fileName))
-			{
-				Log.Verbose("Resolving assembly {0} from file", name);
-				return Assembly.ReflectionOnlyLoadFrom(fileName);
-			}
+            if (File.Exists(filePath))
+            {
+                var versionInfo = FileVersionInfo.GetVersionInfo(filePath);
+                if (versionInfo.ProductVersion.Equals(version, StringComparison.InvariantCultureIgnoreCase))
+                    return LoadAssembly(filePath, name);
+            }
 
             return null;
-		}
+        }
 
-		public void AddTraceListener(TraceListener listener)
+        private Assembly LoadAssemblyFromFile(string fullAssemblyName, string dir)
+        {
+            string name;
+            var filePath = GetAssaemblyPath(fullAssemblyName, dir, out name);
+
+            Log.Verbose("Searching for assembly file '{0}'", filePath);
+
+            if (File.Exists(filePath))
+                return LoadAssembly(filePath, name);
+
+            return null;
+        }
+
+        private Assembly LoadAssembly(string filePath, string name)
+        {
+            Log.Verbose("Resolving assembly {0} from file", name);
+            return Assembly.ReflectionOnlyLoadFrom(filePath);
+        }
+
+        private string GetAssaemblyPath(string fullAssemblyName, string dir, out string name)
+        {
+            name = fullAssemblyName;
+            if (name.IndexOf(',') > 0)
+                name = name.Substring(0, name.IndexOf(','));
+
+            string filePath = Path.Combine(dir, name);
+
+            if (!filePath.EndsWith(".dll", StringComparison.InvariantCultureIgnoreCase))
+                filePath += ".dll";
+
+            return filePath;
+        }
+
+        public void AddTraceListener(TraceListener listener)
 		{
 			Trace.Listeners.Add(listener);
 		}

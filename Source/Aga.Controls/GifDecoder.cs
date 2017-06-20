@@ -611,8 +611,10 @@ namespace Aga.Controls
 					int r = ((int) c[j++]) & 0xff;
 					int g = ((int) c[j++]) & 0xff;
 					int b = ((int) c[j++]) & 0xff;
-					tab[i++] = ( int ) ( 0xff000000 | (r << 16) | (g << 8) | b );
-				}
+#pragma warning disable CS0675 // Bitwise-or operator used on a sign-extended operand
+                    tab[i++] = ( int ) ( 0xff000000 | (r << 16) | (g << 8) | b );
+#pragma warning restore CS0675 // Bitwise-or operator used on a sign-extended operand
+                }
 			}
 			return tab;
 		}
