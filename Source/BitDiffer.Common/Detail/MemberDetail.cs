@@ -33,9 +33,8 @@ namespace BitDiffer.Common.Model
             try
             {
                 IList<CustomAttributeData> cads = CustomAttributeData.GetCustomAttributes(mi);
-                cads = FilterSupportedAttributes(cads);
 
-                foreach (CustomAttributeData cad in cads)
+                foreach (CustomAttributeData cad in cads.Where(a => AttributesUtil.IsAttributeSupported(a.AttributeType.FullName)))
                 {
                     _children.Add(new AttributeDetail(this, cad));
                 }
@@ -244,11 +243,6 @@ namespace BitDiffer.Common.Model
             }
 
             csb.Mode = oldMode;
-        }
-
-        private IList<CustomAttributeData> FilterSupportedAttributes(IList<CustomAttributeData> attributes)
-        {
-            return attributes.Where(a => AttributesUtil.IsAttributeSupported(a.AttributeType.FullName)).ToList();
         }
     }
 }

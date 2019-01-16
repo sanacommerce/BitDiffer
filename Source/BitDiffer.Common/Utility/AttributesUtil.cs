@@ -8,14 +8,9 @@ namespace BitDiffer.Common.Utility
 {
     public static class AttributesUtil
     {
-        public static IEnumerable<string> GetNotSupportedAttributesFullNames()
-        {
-            yield return "System.Diagnostics.CodeAnalysis.SuppressMessageAttribute";
-        }
-
         public static bool IsAttributeSupported(string fullName)
         {
-            return GetNotSupportedAttributesFullNames().All(n => n != fullName);
+            return fullName != "System.Diagnostics.CodeAnalysis.SuppressMessageAttribute";
         }
     }
 }
