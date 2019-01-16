@@ -118,6 +118,7 @@
     <Compile Include="TraceListeners\RelayingTraceListener.cs" />
     <Compile Include="TraceListeners\TraceEventArgs.cs" />
     <Compile Include="Utility\AppendMode.cs" />
+    <Compile Include="Utility\AttributesUtil.cs" />
     <Compile Include="Utility\ChangeTypeUtil.cs" />
     <Compile Include="Utility\CodeStringBuilder.cs" />
     <Compile Include="Utility\HtmlUtility.cs" />

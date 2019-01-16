@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.ComponentModel;
@@ -32,6 +33,7 @@ namespace BitDiffer.Common.Model
             try
             {
                 IList<CustomAttributeData> cads = CustomAttributeData.GetCustomAttributes(mi);
+                cads = FilterSupportedAttributes(cads);
 
                 foreach (CustomAttributeData cad in cads)
                 {
@@ -242,6 +244,11 @@ namespace BitDiffer.Common.Model
             }
 
             csb.Mode = oldMode;
+        }
+
+        private IList<CustomAttributeData> FilterSupportedAttributes(IList<CustomAttributeData> attributes)
+        {
+            return attributes.Where(a => AttributesUtil.IsAttributeSupported(a.AttributeType.FullName)).ToList();
         }
     }
 }
